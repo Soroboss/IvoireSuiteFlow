@@ -21,6 +21,7 @@ export type ReservationRow = {
   check_out_at: string;
   timer_expires_at: string | null;
   total_amount: number;
+  created_at: string;
   room_id: string;
   client_id: string | null;
   room_number?: string;

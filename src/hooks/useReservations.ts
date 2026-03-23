@@ -24,7 +24,7 @@ export function useReservations() {
       .from("reservations")
       .select(
         `
-        id, booking_ref, booking_mode, status, payment_status, check_in_at, check_out_at, timer_expires_at, total_amount, room_id, client_id,
+        id, booking_ref, booking_mode, status, payment_status, check_in_at, check_out_at, timer_expires_at, total_amount, room_id, client_id, created_at,
         rooms:room_id(room_number),
         clients:client_id(full_name)
       `
@@ -45,6 +45,7 @@ export function useReservations() {
         check_out_at: row.check_out_at,
         timer_expires_at: row.timer_expires_at,
         total_amount: Number(row.total_amount ?? 0),
+        created_at: row.created_at,
         room_id: row.room_id,
         client_id: row.client_id,
         room_number: room?.room_number ?? "-",

@@ -11,47 +11,63 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    password: "",
+    organization_name: "",
+    organization_city: "",
+    establishment_name: "",
+    establishment_type: "hotel",
+    establishment_address: "",
+    establishment_neighborhood: "",
+    establishment_city: "",
+    establishment_units: "1"
+  });
   const progress = useMemo(() => ((step + 1) / 3) * 100, [step]);
+
+  const updateField = (name: string, value: string) => {
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const isCurrentStepValid = () => {
+    if (step === 0) return Boolean(form.full_name && form.email && form.phone && form.password);
+    if (step === 1) return Boolean(form.organization_name && form.organization_city);
+    return Boolean(form.establishment_name && form.establishment_address && form.establishment_neighborhood && form.establishment_city);
+  };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    const formData = new FormData(event.currentTarget);
 
     if (step < 2) {
+      if (!isCurrentStepValid()) {
+        setError("Veuillez remplir tous les champs requis avant de continuer.");
+        return;
+      }
       setStep((v) => v + 1);
       return;
     }
 
     setLoading(true);
     const supabase = createClient();
-    const email = String(formData.get("email") ?? "");
-    const password = String(formData.get("password") ?? "");
-    const fullName = String(formData.get("full_name") ?? "");
-    const phone = String(formData.get("phone") ?? "");
-    const orgName = String(formData.get("organization_name") ?? "");
-    const orgCity = String(formData.get("organization_city") ?? "");
-    const estName = String(formData.get("establishment_name") ?? "");
-    const estType = String(formData.get("establishment_type") ?? "hotel");
-    const estAddress = String(formData.get("establishment_address") ?? "");
-    const estNeighborhood = String(formData.get("establishment_neighborhood") ?? "");
-    const estCity = String(formData.get("establishment_city") ?? "");
 
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password,
-        full_name: fullName,
-        phone,
-        organization_name: orgName,
-        organization_city: orgCity,
-        establishment_name: estName,
-        establishment_type: estType,
-        establishment_address: estAddress,
-        establishment_neighborhood: estNeighborhood,
-        establishment_city: estCity
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        full_name: form.full_name,
+        phone: form.phone,
+        organization_name: form.organization_name,
+        organization_city: form.organization_city,
+        establishment_name: form.establishment_name,
+        establishment_type: form.establishment_type,
+        establishment_address: form.establishment_address,
+        establishment_neighborhood: form.establishment_neighborhood,
+        establishment_city: form.establishment_city
       })
     });
 
@@ -64,8 +80,8 @@ export default function RegisterPage() {
     }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password
+      email: form.email.trim().toLowerCase(),
+      password: form.password
     });
 
     setLoading(false);
@@ -91,24 +107,24 @@ export default function RegisterPage() {
 
       {step === 0 && (
         <>
-          <input name="full_name" placeholder="Nom complet" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="email" type="email" placeholder="Email" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="phone" placeholder="Téléphone" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="password" type="password" placeholder="Mot de passe" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="full_name" value={form.full_name} onChange={(e) => updateField("full_name", e.target.value)} placeholder="Nom complet" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} type="email" placeholder="Email" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="phone" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="Téléphone" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="password" value={form.password} onChange={(e) => updateField("password", e.target.value)} type="password" placeholder="Mot de passe" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
         </>
       )}
 
       {step === 1 && (
         <>
-          <input name="organization_name" placeholder="Nom de l'organisation" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="organization_city" placeholder="Ville" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="organization_name" value={form.organization_name} onChange={(e) => updateField("organization_name", e.target.value)} placeholder="Nom de l'organisation" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="organization_city" value={form.organization_city} onChange={(e) => updateField("organization_city", e.target.value)} placeholder="Ville" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
         </>
       )}
 
       {step === 2 && (
         <>
-          <input name="establishment_name" placeholder="Nom de l'établissement" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <select name="establishment_type" className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3">
+          <input name="establishment_name" value={form.establishment_name} onChange={(e) => updateField("establishment_name", e.target.value)} placeholder="Nom de l'établissement" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <select name="establishment_type" value={form.establishment_type} onChange={(e) => updateField("establishment_type", e.target.value)} className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3">
             <option value="hotel">Hôtel</option>
             <option value="residence_meublee">Résidence meublée</option>
             <option value="auberge">Auberge</option>
@@ -116,10 +132,10 @@ export default function RegisterPage() {
             <option value="maison_hotes">Maison d'hôtes</option>
             <option value="appart_hotel">Appart-hôtel</option>
           </select>
-          <input name="establishment_address" placeholder="Adresse" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="establishment_neighborhood" placeholder="Quartier" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="establishment_city" placeholder="Ville" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
-          <input name="establishment_units" type="number" min={1} placeholder="Nombre de chambres/logements" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="establishment_address" value={form.establishment_address} onChange={(e) => updateField("establishment_address", e.target.value)} placeholder="Adresse" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="establishment_neighborhood" value={form.establishment_neighborhood} onChange={(e) => updateField("establishment_neighborhood", e.target.value)} placeholder="Quartier" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="establishment_city" value={form.establishment_city} onChange={(e) => updateField("establishment_city", e.target.value)} placeholder="Ville" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
+          <input name="establishment_units" value={form.establishment_units} onChange={(e) => updateField("establishment_units", e.target.value)} type="number" min={1} placeholder="Nombre de chambres/logements" required className="h-11 w-full rounded-md border border-isf-border bg-isf-bgElevated px-3" />
         </>
       )}
 

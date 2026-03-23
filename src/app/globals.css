@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --isf-bg-deep: #06090f;
+  --isf-bg-card: #0c1018;
+  --isf-bg-elevated: #111827;
+  --isf-bg-hover: #1a2332;
+  --isf-border: #1e293b;
+  --isf-border-light: #334155;
+  --isf-gold: #c8a951;
+  --isf-gold-light: #e2d292;
+  --isf-gold-dim: rgba(200, 169, 81, 0.12);
+  --isf-gold-glow: rgba(200, 169, 81, 0.25);
+  --isf-cream: #faf8f2;
+  --isf-text: #e8e6e1;
+  --isf-text-secondary: #94a3b8;
+  --isf-text-muted: #64748b;
+  --isf-success: #22c55e;
+  --isf-error: #ef4444;
+  --isf-warning: #f59e0b;
+  --isf-info: #3b82f6;
+  --isf-purple: #8b5cf6;
+}
+
+* {
+  @apply border-isf-border;
+}
+
+body {
+  @apply bg-isf-bgDeep text-isf-text font-sans antialiased;
+}
+
+.isf-african-pattern {
+  background-image: radial-gradient(circle at 2px 2px, rgba(200, 169, 81, 0.045) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+
+.isf-gold-gradient {
+  background: linear-gradient(90deg, var(--isf-gold-light), var(--isf-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

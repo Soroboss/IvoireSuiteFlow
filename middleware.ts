@@ -1,28 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Copie les Set-Cookie issus du refresh session vers une redirection (évite de perdre la session). */
-function redirectWithSessionCookies(
-  url: URL,
-  supabaseResponse: NextResponse
-): NextResponse {
-  const redirectResponse = NextResponse.redirect(url);
-  supabaseResponse.cookies.getAll().forEach((cookie) => {
-    redirectResponse.cookies.set(cookie.name, cookie.value, {
-      domain: cookie.domain,
-      expires: cookie.expires,
-      httpOnly: cookie.httpOnly,
-      maxAge: cookie.maxAge,
-      path: cookie.path,
-      sameSite: cookie.sameSite as boolean | "lax" | "strict" | "none" | undefined,
-      secure: cookie.secure,
-      partitioned: cookie.partitioned,
-      priority: cookie.priority,
-    });
-  });
-  return redirectResponse;
-}
-
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthRoute =
@@ -39,7 +17,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // Pattern recommandé @supabase/ssr ≥ 0.5 (getAll / setAll) — évite des erreurs Edge avec get/set/remove.
+    // Middleware Edge ultra-defensif: evite toute operation cookie qui peut throw.
     let supabaseResponse = NextResponse.next({ request });
 
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -48,10 +26,6 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set({ name, value, ...options });
-          });
-          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set({ name, value, ...options });
           });
@@ -66,11 +40,11 @@ export async function middleware(request: NextRequest) {
     if (isPublicBooking) return supabaseResponse;
 
     if ((isDashboardRoute || isAdminRoute) && !user) {
-      return redirectWithSessionCookies(new URL("/login", request.url), supabaseResponse);
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
     if (isAuthRoute && user) {
-      return redirectWithSessionCookies(new URL("/dashboard", request.url), supabaseResponse);
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     if (isAdminRoute && user) {
@@ -82,10 +56,10 @@ export async function middleware(request: NextRequest) {
           .maybeSingle();
 
         if (profile?.role !== "super_admin") {
-          return redirectWithSessionCookies(new URL("/dashboard", request.url), supabaseResponse);
+          return NextResponse.redirect(new URL("/dashboard", request.url));
         }
       } catch {
-        return redirectWithSessionCookies(new URL("/dashboard", request.url), supabaseResponse);
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
 

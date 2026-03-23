@@ -11,10 +11,18 @@ const PRICE_BY_PLAN = {
 };
 
 export default function AdminSubscribersPage() {
-  const { loading, rows } = useAdminSaasData();
+  const { loading, rows, error } = useAdminSaasData();
 
   if (loading) {
     return <div className="rounded-xl border border-isf-border bg-isf-bgCard p-4 text-sm text-isf-textSecondary">Chargement abonnes...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-isf-error/40 bg-isf-error/10 p-4 text-sm text-isf-error">
+        {error}
+      </div>
+    );
   }
 
   return (
@@ -39,7 +47,7 @@ export default function AdminSubscribersPage() {
                 <td className="px-3 py-3">{row.name}</td>
                 <td className="px-3 py-3">{row.city ?? "-"}</td>
                 <td className="px-3 py-3 uppercase">{row.subscription_plan}</td>
-                <td className="px-3 py-3">{row.max_establishments ?? "-"}</td>
+                <td className="px-3 py-3">{row.room_count ?? 0}</td>
                 <td className="px-3 py-3">{formatFCFA(PRICE_BY_PLAN[row.subscription_plan])}</td>
                 <td className="px-3 py-3">{row.subscription_status}</td>
                 <td className="px-3 py-3">{row.subscription_ends_at ? formatDate(row.subscription_ends_at, "dd/MM/yyyy") : "-"}</td>

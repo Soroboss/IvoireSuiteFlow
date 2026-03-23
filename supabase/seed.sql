@@ -70,7 +70,7 @@ values
   '22222222-2222-2222-2222-222222222221',
   '11111111-1111-1111-1111-111111111111',
   'Résidence IvoireSuite Angré',
-  'residence-ivoiresuite-angre',
+  'residence-angre-cocody',
   'residence_meublee',
   'Angré 8ème tranche, Cocody',
   'Abidjan',
@@ -129,7 +129,7 @@ values
   'Admin IvoireSuiteFlow',
   '+2250703030303',
   'admin@ivoiresuiteflow.com',
-  'admin',
+  'super_admin',
   true
 ),
 (

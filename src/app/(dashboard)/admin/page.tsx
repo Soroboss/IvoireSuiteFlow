@@ -8,10 +8,18 @@ import { formatFCFA } from "@/lib/utils";
 const colors = ["#C8A951", "#0EA5E9", "#8B5CF6"];
 
 export default function AdminDashboardPage() {
-  const { loading, kpis, subscribers12m, mrr12m, planDistribution, cityDistribution, alerts } = useAdminSaasData();
+  const { loading, error, kpis, subscribers12m, mrr12m, planDistribution, cityDistribution, alerts } = useAdminSaasData();
 
   if (loading) {
     return <div className="rounded-xl border border-isf-border bg-isf-bgCard p-4 text-sm text-isf-textSecondary">Chargement SaaS...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-isf-error/40 bg-isf-error/10 p-4 text-sm text-isf-error">
+        {error}
+      </div>
+    );
   }
 
   return (

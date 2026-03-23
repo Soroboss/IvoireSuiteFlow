@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { addMonths, format, startOfMonth, subMonths } from "date-fns";
-import { createClient } from "@/lib/supabase/client";
 
-type SubscriberRow = {
+export type SubscriberRow = {
   id: string;
   name: string;
   city: string | null;
@@ -13,20 +12,28 @@ type SubscriberRow = {
   trial_ends_at: string | null;
   subscription_ends_at?: string | null;
   max_establishments?: number | null;
+  room_count?: number;
 };
 
 export function useAdminSaasData() {
   const [rows, setRows] = useState<SubscriberRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("organizations")
-        .select("id, name, city, subscription_plan, subscription_status, trial_ends_at, subscription_ends_at, max_establishments")
-        .order("created_at", { ascending: false });
-      setRows((data ?? []) as SubscriberRow[]);
+      setError(null);
+      const res = await fetch("/api/admin/saas", { credentials: "include" });
+      const json = (await res.json()) as { rows?: SubscriberRow[]; error?: string };
+
+      if (!res.ok) {
+        setRows([]);
+        setError(json.error ?? "Impossible de charger les données SaaS");
+        setLoading(false);
+        return;
+      }
+
+      setRows(json.rows ?? []);
       setLoading(false);
     };
     run();
@@ -115,6 +122,7 @@ export function useAdminSaasData() {
   return {
     loading,
     rows,
+    error,
     kpis,
     subscribers12m,
     mrr12m,

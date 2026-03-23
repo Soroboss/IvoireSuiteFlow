@@ -37,71 +37,43 @@ export default function RegisterPage() {
     const estNeighborhood = String(formData.get("establishment_neighborhood") ?? "");
     const estCity = String(formData.get("establishment_city") ?? "");
 
-    const { data, error: authError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
-    if (authError || !data.user) {
-      setLoading(false);
-      setError("Impossible de créer le compte pour le moment.");
-      return;
-    }
-
-    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: organization, error: orgError } = await supabase
-      .from("organizations")
-      .insert({
-        name: orgName,
-        city: orgCity,
-        email,
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+        full_name: fullName,
         phone,
-        subscription_plan: "trial",
-        subscription_status: "trial",
-        trial_ends_at: trialEndsAt
+        organization_name: orgName,
+        organization_city: orgCity,
+        establishment_name: estName,
+        establishment_type: estType,
+        establishment_address: estAddress,
+        establishment_neighborhood: estNeighborhood,
+        establishment_city: estCity
       })
-      .select("id")
-      .single();
+    });
 
-    if (orgError || !organization) {
+    const json = (await res.json()) as { success?: boolean; message?: string };
+
+    if (!res.ok || !json.success) {
       setLoading(false);
-      setError("Création de l'organisation échouée.");
+      setError(json.message ?? "Impossible de créer le compte pour le moment.");
       return;
     }
 
-    const slug = `${estName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-5)}`;
-    const { data: establishment, error: estError } = await supabase
-      .from("establishments")
-      .insert({
-        organization_id: organization.id,
-        name: estName,
-        slug,
-        type: estType,
-        address: estAddress,
-        neighborhood: estNeighborhood,
-        city: estCity,
-        country: "CI"
-      })
-      .select("id")
-      .single();
-
-    if (estError || !establishment) {
-      setLoading(false);
-      setError("Création de l'établissement échouée.");
-      return;
-    }
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      organization_id: organization.id,
-      establishment_id: establishment.id,
-      full_name: fullName,
-      email,
-      phone,
-      role: "admin"
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password
     });
 
     setLoading(false);
-    if (profileError) {
-      setError("Création du profil échouée.");
+    if (signInError) {
+      setError("Compte créé. Connectez-vous manuellement depuis la page de connexion.");
       return;
     }
+
     router.push("/dashboard");
   };
 

@@ -22,7 +22,7 @@ export default function LoginPage() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
-      setError("Email ou mot de passe incorrect.");
+      setError(signInError.message || "Email ou mot de passe incorrect.");
       return;
     }
     router.push("/dashboard");

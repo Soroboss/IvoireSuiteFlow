@@ -61,6 +61,30 @@ values
 )
 on conflict (id) do nothing;
 
+-- Identités email (requis pour signInWithPassword côté GoTrue)
+insert into auth.identities (
+  id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
+)
+select
+  gen_random_uuid(),
+  u.id,
+  jsonb_build_object(
+    'sub', u.id::text,
+    'email', u.email,
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  'email',
+  u.id::text,
+  now(),
+  now(),
+  now()
+from auth.users u
+where u.email in ('admin@ivoiresuiteflow.com', 'reception@ivoiresuiteflow.com')
+  and not exists (
+    select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email'
+  );
+
 insert into public.establishments (
   id, organization_id, name, slug, type, address, city, neighborhood, country, phone, whatsapp, email,
   star_rating, currency, timezone, settings, is_active

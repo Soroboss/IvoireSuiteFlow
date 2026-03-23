@@ -26,6 +26,24 @@ update public.establishments
 set slug = 'residence-angre-cocody'
 where id = '22222222-2222-2222-2222-222222222221';
 
+-- Enum du rôle : certaines bases n'ont pas la valeur super_admin (ex. type user_role vs user_role_enum)
+do $$
+declare
+  tname text;
+begin
+  select c.udt_name::text
+    into tname
+  from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = 'profiles'
+    and c.column_name = 'role'
+  limit 1;
+
+  if tname is not null then
+    execute format('alter type public.%I add value if not exists %L', tname, 'super_admin');
+  end if;
+end$$;
+
 update public.profiles
 set role = 'super_admin'
 where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';

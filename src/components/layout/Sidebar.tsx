@@ -27,6 +27,7 @@ const nav = [
 ];
 
 const adminNav = [
+  { href: "/admin", label: "Dashboard SaaS", icon: LayoutDashboard },
   { href: "/admin/subscribers", label: "Abonnés", icon: Building2 },
   { href: "/admin/plans", label: "Plans", icon: CreditCard }
 ];

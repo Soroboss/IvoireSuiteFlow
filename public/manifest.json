@@ -4,16 +4,17 @@
   "description": "Simplifiez vos opérations, valorisez vos établissements.",
   "start_url": "/dashboard",
   "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0C1018",
   "background_color": "#06090F",
-  "theme_color": "#C8A951",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/isf-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/isf-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

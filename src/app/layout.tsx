@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
+import { PWARegister } from "@/components/pwa/PWARegister";
 import "./globals.css";
 
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
@@ -9,13 +10,15 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrai
 
 export const metadata: Metadata = {
   title: "IvoireSuiteFlow",
-  description: "Simplifiez vos opérations, valorisez vos établissements."
+  description: "Simplifiez vos opérations, valorisez vos établissements.",
+  manifest: "/manifest.json"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
       <body className={`${playfair.variable} ${jakarta.variable} ${jetbrains.variable}`}>
+        <PWARegister />
         {children}
         <Toaster richColors position="top-right" />
       </body>

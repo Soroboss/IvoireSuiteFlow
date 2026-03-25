@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { FCFADisplay } from "@/components/shared/FCFADisplay";
 import { RoomStatusBadge } from "@/components/rooms/RoomStatusBadge";
 import { HourlyTimer } from "@/components/rooms/HourlyTimer";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 import { formatDate } from "@/lib/utils";
 import type { RoomWithRelations } from "@/types/room";
 
@@ -36,12 +36,12 @@ export default function RoomDetailPage() {
   const [tab, setTab] = useState<"history" | "revenues" | "maintenance">("history");
 
   useEffect(() => {
-    if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_INSFORGE_BASE_URL) {
       return;
     }
     const run = async () => {
-      const supabase = createClient();
-      const { data: roomData } = await supabase
+      const insforge = createClient();
+      const { data: roomData } = await insforge.database
         .from("rooms")
         .select(
           `
@@ -54,7 +54,7 @@ export default function RoomDetailPage() {
         `
         )
         .eq("id", params.id)
-        .single();
+        .maybeSingle();
 
       if (roomData) {
         const roomType = Array.isArray(roomData.room_types) ? roomData.room_types[0] : roomData.room_types;
@@ -90,7 +90,7 @@ export default function RoomDetailPage() {
         });
       }
 
-      const { data: historyData } = await supabase
+      const { data: historyData } = await insforge.database
         .from("reservations")
         .select("id, booking_mode, check_in_at, check_out_at, total_amount")
         .eq("room_id", params.id)
@@ -98,7 +98,7 @@ export default function RoomDetailPage() {
         .limit(20);
       setHistory((historyData as HistoryItem[]) ?? []);
 
-      const { data: maintenanceData } = await supabase
+      const { data: maintenanceData } = await insforge.database
         .from("maintenance_requests")
         .select("id, issue, status, created_at")
         .eq("room_id", params.id)

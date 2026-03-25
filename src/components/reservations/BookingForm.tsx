@@ -7,7 +7,7 @@ import { HourSelector } from "@/components/reservations/HourSelector";
 import { BookingModeBadge } from "@/components/shared/BookingModeBadge";
 import { FCFADisplay } from "@/components/shared/FCFADisplay";
 import { SearchInput } from "@/components/shared/SearchInput";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 import { generateContractPdf } from "@/lib/pdf/contract-template";
 import { formatFCFA } from "@/lib/utils";
 import { useReservations } from "@/hooks/useReservations";
@@ -73,9 +73,9 @@ export function BookingForm() {
 
   const lookupClient = async (query: string) => {
     setClientSearch(query);
-    if (query.length < 3 || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
-    const supabase = createClient();
-    const { data } = await supabase
+    if (query.length < 3 || !process.env.NEXT_PUBLIC_INSFORGE_BASE_URL) return;
+    const insforge = createClient();
+    const { data } = await insforge.database
       .from("clients")
       .select("id, full_name, phone, total_stays, total_spent, loyalty_points, is_blacklisted, blacklist_reason")
       .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`)
@@ -85,21 +85,16 @@ export function BookingForm() {
 
   const submit = async () => {
     let clientId = client?.id ?? null;
-    const supabaseReady = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    if (!clientId && supabaseReady) {
-      const supabase = createClient();
+    const backendReady = Boolean(process.env.NEXT_PUBLIC_INSFORGE_BASE_URL);
+    if (!clientId && backendReady) {
+      const insforge = createClient();
       let idDocumentUrl: string | null = null;
       if (idDocumentFile && mode !== "hourly") {
-        const filePath = `client-ids/${Date.now()}-${idDocumentFile.name}`;
-        const { error: uploadError } = await supabase.storage.from("documents").upload(filePath, idDocumentFile, {
-          upsert: false
-        });
-        if (!uploadError) {
-          const { data: publicData } = supabase.storage.from("documents").getPublicUrl(filePath);
-          idDocumentUrl = publicData.publicUrl;
-        }
+        // TODO: brancher InsForge Storage (selon ton setup bucket/ACL).
+        // Pour l’instant on n’envoie pas la pièce, on garde uniquement les champs.
+        idDocumentUrl = null;
       }
-      const { data: c } = await supabase
+      const { data: clientRows } = await insforge.database
         .from("clients")
         .insert({
           organization_id: "11111111-1111-1111-1111-111111111111",
@@ -111,15 +106,14 @@ export function BookingForm() {
           id_number: mode === "hourly" ? null : newClient.id_number,
           id_document_url: mode === "hourly" ? null : idDocumentUrl
         })
-        .select("id")
-        .single();
-      clientId = c?.id ?? null;
+        .select("id");
+      clientId = Array.isArray(clientRows) ? clientRows[0]?.id ?? null : null;
     }
 
     const checkOut = mode === "hourly" ? new Date(new Date(dates.checkIn).getTime() + durationHours * 3600000).toISOString() : new Date(dates.checkOut).toISOString();
     let contractUrl: string | null = null;
-    if (mode === "stay" && supabaseReady) {
-      const supabase = createClient();
+    if (mode === "stay" && backendReady) {
+      createClient();
       const contractDoc = generateContractPdf({
         bookingRef: `ISF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
         clientName: client?.full_name ?? newClient.full_name,
@@ -129,16 +123,9 @@ export function BookingForm() {
         monthlyAmount: amountBase,
         depositAmount: depositAmount
       });
-      const blob = contractDoc.output("blob");
-      const filePath = `contracts/${Date.now()}-contract.pdf`;
-      const { error: uploadError } = await supabase.storage.from("documents").upload(filePath, blob, {
-        contentType: "application/pdf",
-        upsert: false
-      });
-      if (!uploadError) {
-        const { data } = supabase.storage.from("documents").getPublicUrl(filePath);
-        contractUrl = data.publicUrl;
-      }
+      void contractDoc;
+      // TODO: brancher InsForge Storage pour stocker le contrat PDF.
+      contractUrl = null;
     }
     const reservation = await createReservation({
       booking_mode: mode!,

@@ -1,30 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 export function useRealtimeRooms(establishmentId: string, onChange: () => void) {
   useEffect(() => {
-    if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    // InsForge realtime est basé sur du pub/sub WebSocket, pas sur des triggers Postgres "postgres_changes"
+    // comme Supabase. Sans setup explicite côté backend (publish lors de changements rooms),
+    // on bascule sur un polling léger.
+    if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_INSFORGE_BASE_URL) {
       return;
     }
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`isf-rooms-${establishmentId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "rooms",
-          filter: `establishment_id=eq.${establishmentId}`
-        },
-        () => onChange()
-      )
-      .subscribe();
+
+    // TODO: remplacer par insforge.realtime.subscribe/publish quand on aura un channel backend.
+    const interval = window.setInterval(() => onChange(), 8000);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(interval);
     };
   }, [establishmentId, onChange]);
 }

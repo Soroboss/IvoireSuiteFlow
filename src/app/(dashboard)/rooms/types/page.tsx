@@ -2,20 +2,20 @@
 
 import { useMemo } from "react";
 import { RoomTypeManager } from "@/components/rooms/RoomTypeManager";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 import { useRooms } from "@/hooks/useRooms";
 import type { RoomTypeRow } from "@/types/room";
 
 export default function RoomTypesPage() {
   const { roomTypes, establishmentId } = useRooms();
-  const canUseSupabase = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const canUseBackend = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_INSFORGE_BASE_URL);
 
   const sorted = useMemo(() => [...roomTypes].sort((a, b) => a.sort_order - b.sort_order), [roomTypes]);
 
   const handleCreate = async (payload: Partial<RoomTypeRow>) => {
-    if (!canUseSupabase) return;
-    const supabase = createClient();
-    await supabase.from("room_types").insert({
+    if (!canUseBackend) return;
+    const insforge = createClient();
+    await insforge.database.from("room_types").insert({
       establishment_id: establishmentId,
       organization_id: "11111111-1111-1111-1111-111111111111",
       name: payload.name,
@@ -38,9 +38,9 @@ export default function RoomTypesPage() {
   };
 
   const handleUpdate = async (id: string, payload: Partial<RoomTypeRow>) => {
-    if (!canUseSupabase) return;
-    const supabase = createClient();
-    await supabase.from("room_types").update(payload).eq("id", id);
+    if (!canUseBackend) return;
+    const insforge = createClient();
+    await insforge.database.from("room_types").update(payload).eq("id", id);
   };
 
   return (

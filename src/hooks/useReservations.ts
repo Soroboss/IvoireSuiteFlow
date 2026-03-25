@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 import type { NewReservationPayload, ReservationRow } from "@/types/booking";
 import type { BookingMode } from "@/types/room";
 
@@ -12,15 +12,15 @@ const CREATED_BY = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 export function useReservations() {
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const canUseSupabase = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const canUseBackend = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_INSFORGE_BASE_URL);
 
   const fetchReservations = useCallback(async () => {
-    if (!canUseSupabase) {
+    if (!canUseBackend) {
       setLoading(false);
       return;
     }
-    const supabase = createClient();
-    const { data } = await supabase
+    const insforge = createClient();
+    const { data } = await insforge.database
       .from("reservations")
       .select(
         `
@@ -55,7 +55,7 @@ export function useReservations() {
 
     setReservations(mapped);
     setLoading(false);
-  }, [canUseSupabase]);
+  }, [canUseBackend]);
 
   useEffect(() => {
     fetchReservations();
@@ -63,9 +63,9 @@ export function useReservations() {
 
   const addJournalLog = useCallback(
     async (reservationId: string, actionType: string, actionLabel: string, metadata: Record<string, unknown> = {}) => {
-      if (!canUseSupabase) return;
-      const supabase = createClient();
-      await supabase.from("reservation_action_logs").insert({
+      if (!canUseBackend) return;
+      const insforge = createClient();
+      await insforge.database.from("reservation_action_logs").insert({
         organization_id: ORGANIZATION_ID,
         establishment_id: ESTABLISHMENT_ID,
         reservation_id: reservationId,
@@ -75,16 +75,16 @@ export function useReservations() {
         created_by: CREATED_BY
       });
     },
-    [canUseSupabase]
+    [canUseBackend]
   );
 
   const createReservation = useCallback(
     async (payload: NewReservationPayload) => {
-      if (!canUseSupabase) return null;
-      const supabase = createClient();
+      if (!canUseBackend) return null;
+      const insforge = createClient();
 
       const bookingRef = `ISF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-      const { data: reservation, error } = await supabase
+      const { data: reservationRows, error } = await insforge.database
         .from("reservations")
         .insert({
           organization_id: ORGANIZATION_ID,
@@ -95,15 +95,19 @@ export function useReservations() {
           created_by: CREATED_BY,
           ...payload
         })
-        .select("id, booking_ref")
-        .single();
+        .select("id, booking_ref");
+
+      const reservation = Array.isArray(reservationRows) ? reservationRows[0] : null;
 
       if (error || !reservation) return null;
 
-      await supabase.from("rooms").update({ status: "occupied", current_reservation_id: reservation.id }).eq("id", payload.room_id);
+      await insforge.database
+        .from("rooms")
+        .update({ status: "occupied", current_reservation_id: reservation.id })
+        .eq("id", payload.room_id);
 
       if (payload.payment_status === "paid" || payload.payment_status === "partial") {
-        await supabase.from("payments").insert({
+        await insforge.database.from("payments").insert({
           organization_id: ORGANIZATION_ID,
           establishment_id: ESTABLISHMENT_ID,
           reservation_id: reservation.id,
@@ -123,14 +127,14 @@ export function useReservations() {
       await fetchReservations();
       return reservation;
     },
-    [addJournalLog, canUseSupabase, fetchReservations]
+    [addJournalLog, canUseBackend, fetchReservations]
   );
 
   const getAvailableRooms = useCallback(
     async (checkIn: string, checkOut: string, mode: BookingMode) => {
-      if (!canUseSupabase) return [];
-      const supabase = createClient();
-      const { data } = await supabase.rpc("get_available_rooms", {
+      if (!canUseBackend) return [];
+      const insforge = createClient();
+      const { data } = await insforge.database.rpc("get_available_rooms", {
         p_establishment_id: ESTABLISHMENT_ID,
         p_check_in: checkIn,
         p_check_out: checkOut,
@@ -138,7 +142,7 @@ export function useReservations() {
       });
       return data ?? [];
     },
-    [canUseSupabase]
+    [canUseBackend]
   );
 
   const stats = useMemo(() => {

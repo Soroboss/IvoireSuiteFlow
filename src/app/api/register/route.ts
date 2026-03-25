@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createServerInsforgeClient } from "@/lib/insforge/server";
 
 type Body = {
   email: string;
@@ -26,26 +26,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Email ou mot de passe invalide (min. 6 caractères)." }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
+    const insforge = createServerInsforgeClient();
 
-    const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    const { data: created, error: createError } = await insforge.auth.signUp({
       email,
       password,
-      email_confirm: true,
-      user_metadata: { full_name: body.full_name }
+      name: body.full_name
     });
 
-    if (createError || !created.user) {
-      return NextResponse.json(
-        { success: false, message: createError?.message ?? "Création du compte impossible." },
-        { status: 400 }
-      );
+    const userId = created?.user?.id;
+    if (createError || !userId) {
+      return NextResponse.json({ success: false, message: createError?.message ?? "Création du compte impossible." }, { status: 400 });
     }
 
-    const userId = created.user.id;
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: organization, error: orgError } = await supabase
+    const { data: organizationRows, error: orgError } = await insforge.database
       .from("organizations")
       .insert({
         name: body.organization_name,
@@ -56,11 +52,11 @@ export async function POST(request: Request) {
         subscription_status: "trial",
         trial_ends_at: trialEndsAt
       })
-      .select("id")
-      .single();
+      .select("id");
+
+    const organization = Array.isArray(organizationRows) ? organizationRows[0] : null;
 
     if (orgError || !organization) {
-      await supabase.auth.admin.deleteUser(userId);
       return NextResponse.json({ success: false, message: orgError?.message ?? "Organisation non créée." }, { status: 400 });
     }
 
@@ -68,7 +64,7 @@ export async function POST(request: Request) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-5)}`;
 
-    const { data: establishment, error: estError } = await supabase
+    const { data: establishmentRows, error: estError } = await insforge.database
       .from("establishments")
       .insert({
         organization_id: organization.id,
@@ -86,16 +82,15 @@ export async function POST(request: Request) {
         city: body.establishment_city,
         country: "CI"
       })
-      .select("id")
-      .single();
+      .select("id");
+
+    const establishment = Array.isArray(establishmentRows) ? establishmentRows[0] : null;
 
     if (estError || !establishment) {
-      await supabase.from("organizations").delete().eq("id", organization.id);
-      await supabase.auth.admin.deleteUser(userId);
       return NextResponse.json({ success: false, message: estError?.message ?? "Établissement non créé." }, { status: 400 });
     }
 
-    const { error: profileError } = await supabase.from("profiles").insert({
+    const { error: profileError } = await insforge.database.from("profiles").insert({
       id: userId,
       organization_id: organization.id,
       establishment_id: establishment.id,
@@ -106,8 +101,6 @@ export async function POST(request: Request) {
     });
 
     if (profileError) {
-      await supabase.from("organizations").delete().eq("id", organization.id);
-      await supabase.auth.admin.deleteUser(userId);
       return NextResponse.json({ success: false, message: profileError.message ?? "Profil non créé." }, { status: 400 });
     }
 

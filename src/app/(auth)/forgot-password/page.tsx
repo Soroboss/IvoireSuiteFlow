@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 export default function ForgotPasswordPage() {
   const [message, setMessage] = useState<string | null>(null);
@@ -9,11 +9,9 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const supabase = createClient();
+    const insforge = createClient();
     const email = String(form.get("email") ?? "");
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`
-    });
+    await insforge.auth.sendResetPasswordEmail({ email });
     setMessage("Si cet email existe, un lien de réinitialisation a été envoyé.");
   };
 

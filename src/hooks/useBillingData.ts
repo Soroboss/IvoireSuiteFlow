@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 const ESTABLISHMENT_ID = "22222222-2222-2222-2222-222222222221";
 const ORGANIZATION_ID = "11111111-1111-1111-1111-111111111111";
@@ -12,18 +12,18 @@ export function useBillingData() {
   const [payments, setPayments] = useState<any[]>([]);
   const [openBalances, setOpenBalances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const canUseSupabase = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const canUseBackend = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_INSFORGE_BASE_URL);
 
   const fetchData = useCallback(async () => {
-    if (!canUseSupabase) {
+    if (!canUseBackend) {
       setLoading(false);
       return;
     }
-    const supabase = createClient();
+    const insforge = createClient();
     const [{ data: inv }, { data: pay }, { data: res }] = await Promise.all([
-      supabase.from("invoices").select("*, clients:client_id(full_name)").eq("establishment_id", ESTABLISHMENT_ID).order("created_at", { ascending: false }).limit(200),
-      supabase.from("payments").select("*, reservations:reservation_id(booking_ref)").eq("establishment_id", ESTABLISHMENT_ID).order("created_at", { ascending: false }).limit(300),
-      supabase
+      insforge.database.from("invoices").select("*, clients:client_id(full_name)").eq("establishment_id", ESTABLISHMENT_ID).order("created_at", { ascending: false }).limit(200),
+      insforge.database.from("payments").select("*, reservations:reservation_id(booking_ref)").eq("establishment_id", ESTABLISHMENT_ID).order("created_at", { ascending: false }).limit(300),
+      insforge.database
         .from("reservations")
         .select("id, booking_ref, client_id, total_amount, payment_status, clients:client_id(full_name), booking_mode, check_in_at, check_out_at")
         .eq("establishment_id", ESTABLISHMENT_ID)
@@ -34,7 +34,7 @@ export function useBillingData() {
     setPayments(pay ?? []);
     setOpenBalances(res ?? []);
     setLoading(false);
-  }, [canUseSupabase]);
+  }, [canUseBackend]);
 
   useEffect(() => {
     fetchData();
@@ -42,11 +42,11 @@ export function useBillingData() {
 
   const createInvoice = useCallback(
     async (reservation: any) => {
-      if (!canUseSupabase) return null;
-      const supabase = createClient();
+      if (!canUseBackend) return null;
+      const insforge = createClient();
       const year = new Date().getFullYear();
       const invoiceNumber = `ISF-${year}-${String(Math.floor(Math.random() * 99999)).padStart(5, "0")}`;
-      const { data } = await supabase
+      const { data: invoiceRows } = await insforge.database
         .from("invoices")
         .insert({
           organization_id: ORGANIZATION_ID,
@@ -59,19 +59,18 @@ export function useBillingData() {
           tax_amount: 0,
           total_amount: reservation.total_amount
         })
-        .select("*")
-        .single();
+        .select("*");
       await fetchData();
-      return data;
+      return Array.isArray(invoiceRows) ? invoiceRows[0] : null;
     },
-    [canUseSupabase, fetchData]
+    [canUseBackend, fetchData]
   );
 
   const addPayment = useCallback(
     async (reservationId: string, amount: number, paymentMethod: string, reference?: string) => {
-      if (!canUseSupabase) return;
-      const supabase = createClient();
-      await supabase.from("payments").insert({
+      if (!canUseBackend) return;
+      const insforge = createClient();
+      await insforge.database.from("payments").insert({
         organization_id: ORGANIZATION_ID,
         reservation_id: reservationId,
         establishment_id: ESTABLISHMENT_ID,
@@ -83,7 +82,7 @@ export function useBillingData() {
       });
       await fetchData();
     },
-    [canUseSupabase, fetchData]
+    [canUseBackend, fetchData]
   );
 
   const dailySummary = useMemo(() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 const ESTABLISHMENT_ID = "22222222-2222-2222-2222-222222222221";
 
@@ -25,17 +25,17 @@ export function useDashboardData() {
   const [rows, setRows] = useState<ReservationLite[]>([]);
   const [activeRooms, setActiveRooms] = useState(0);
   const [loading, setLoading] = useState(true);
-  const canUseSupabase = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const canUseBackend = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_INSFORGE_BASE_URL);
 
   const fetchData = useCallback(async () => {
-    if (!canUseSupabase) {
+    if (!canUseBackend) {
       setLoading(false);
       return;
     }
-    const supabase = createClient();
+    const insforge = createClient();
 
     const [{ data: reservations }, { count }] = await Promise.all([
-      supabase
+      insforge.database
         .from("reservations")
         .select(
           `
@@ -47,7 +47,7 @@ export function useDashboardData() {
         .eq("establishment_id", ESTABLISHMENT_ID)
         .order("created_at", { ascending: false })
         .limit(400),
-      supabase
+      insforge.database
         .from("rooms")
         .select("id", { count: "exact", head: true })
         .eq("establishment_id", ESTABLISHMENT_ID)
@@ -73,24 +73,19 @@ export function useDashboardData() {
     setRows(mapped);
     setActiveRooms(count ?? 0);
     setLoading(false);
-  }, [canUseSupabase]);
+  }, [canUseBackend]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    if (!canUseSupabase) return;
-    const supabase = createClient();
-    const channel = supabase
-      .channel("isf-dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "reservations", filter: `establishment_id=eq.${ESTABLISHMENT_ID}` }, fetchData)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `establishment_id=eq.${ESTABLISHMENT_ID}` }, fetchData)
-      .subscribe();
+    if (!canUseBackend) return;
+    const interval = window.setInterval(() => fetchData(), 10000);
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(interval);
     };
-  }, [canUseSupabase, fetchData]);
+  }, [canUseBackend, fetchData]);
 
   const metrics = useMemo(() => {
     const now = new Date();

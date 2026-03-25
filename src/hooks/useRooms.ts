@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 import type { RoomStatus, RoomTypeRow, RoomWithRelations } from "@/types/room";
 
 const FALLBACK_ESTABLISHMENT_ID = "22222222-2222-2222-2222-222222222221";
@@ -12,15 +12,15 @@ export function useRooms(establishmentId?: string) {
   const [rooms, setRooms] = useState<RoomWithRelations[]>([]);
   const [roomTypes, setRoomTypes] = useState<RoomTypeRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const canUseSupabase = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const canUseBackend = typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_INSFORGE_BASE_URL);
 
   const fetchRooms = useCallback(async () => {
-    if (!canUseSupabase) {
+    if (!canUseBackend) {
       setLoading(false);
       return;
     }
-    const supabase = createClient();
-    const { data, error } = await supabase
+    const insforge = createClient();
+    const { data, error } = await insforge.database
       .from("rooms")
       .select(
         `
@@ -84,19 +84,19 @@ export function useRooms(establishmentId?: string) {
 
     setRooms(mapped);
     setLoading(false);
-  }, [activeEstablishmentId, canUseSupabase]);
+  }, [activeEstablishmentId, canUseBackend]);
 
   const fetchRoomTypes = useCallback(async () => {
-    if (!canUseSupabase) return;
-    const supabase = createClient();
-    const { data } = await supabase
+    if (!canUseBackend) return;
+    const insforge = createClient();
+    const { data } = await insforge.database
       .from("room_types")
       .select("*")
       .eq("establishment_id", activeEstablishmentId)
       .order("sort_order", { ascending: true });
 
     setRoomTypes((data as RoomTypeRow[]) ?? []);
-  }, [activeEstablishmentId, canUseSupabase]);
+  }, [activeEstablishmentId, canUseBackend]);
 
   useEffect(() => {
     fetchRooms();
@@ -123,12 +123,12 @@ export function useRooms(establishmentId?: string) {
 
   const updateRoomStatus = useCallback(
     async (roomId: string, status: RoomStatus) => {
-      if (!canUseSupabase) return;
-      const supabase = createClient();
-      await supabase.from("rooms").update({ status }).eq("id", roomId);
+      if (!canUseBackend) return;
+      const insforge = createClient();
+      await insforge.database.from("rooms").update({ status }).eq("id", roomId);
       setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, status } : room)));
     },
-    [canUseSupabase]
+    [canUseBackend]
   );
 
   return {

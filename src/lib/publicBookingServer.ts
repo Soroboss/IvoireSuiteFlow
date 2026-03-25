@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createServerInsforgeClient } from "@/lib/insforge/server";
 
 export type PublicBookingPayload = {
   slug: string;
@@ -27,13 +27,13 @@ function generateBookingRef() {
 }
 
 async function getEstablishmentBySlug(slug: string): Promise<EstablishmentContext> {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const insforge = createServerInsforgeClient();
+  const { data, error } = await insforge.database
     .from("establishments")
     .select("id, organization_id, name, slug")
     .eq("slug", slug)
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     throw new Error("Etablissement introuvable");
@@ -48,10 +48,10 @@ export async function getPublicAvailability(input: {
   checkInAt: string;
   checkOutAt: string;
 }) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const insforge = createServerInsforgeClient();
   const establishment = await getEstablishmentBySlug(input.slug);
 
-  const { data, error } = await supabaseAdmin.rpc("get_available_rooms", {
+  const { data, error } = await insforge.database.rpc("get_available_rooms", {
     p_establishment_id: establishment.id,
     p_check_in: input.checkInAt,
     p_check_out: input.checkOutAt,
@@ -75,7 +75,7 @@ export async function getPublicAvailability(input: {
 }
 
 export async function createPublicReservation(payload: PublicBookingPayload) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const insforge = createServerInsforgeClient();
   const availability = await getPublicAvailability({
     slug: payload.slug,
     bookingMode: payload.bookingMode,
@@ -88,7 +88,7 @@ export async function createPublicReservation(payload: PublicBookingPayload) {
     throw new Error("Le logement selectionne n'est plus disponible");
   }
 
-  const { data: client, error: clientError } = await supabaseAdmin
+  const { data: clientRows, error: clientError } = await insforge.database
     .from("clients")
     .insert({
       organization_id: availability.establishment.organization_id,
@@ -96,15 +96,16 @@ export async function createPublicReservation(payload: PublicBookingPayload) {
       phone: payload.customer.phone,
       email: payload.customer.email ?? null
     })
-    .select("id")
-    .single();
+    .select("id");
+
+  const client = Array.isArray(clientRows) ? clientRows[0] : null;
 
   if (clientError || !client) {
     throw new Error("Impossible d'enregistrer les informations client");
   }
 
   const bookingRef = generateBookingRef();
-  const { data: reservation, error: reservationError } = await supabaseAdmin
+  const { data: reservationRows, error: reservationError } = await insforge.database
     .from("reservations")
     .insert({
       organization_id: availability.establishment.organization_id,
@@ -122,8 +123,9 @@ export async function createPublicReservation(payload: PublicBookingPayload) {
       payment_status: "unpaid",
       notes: payload.customer.notes ?? "Reservation publique en ligne - paiement a l'arrivee"
     })
-    .select("id, booking_ref, check_in_at, check_out_at")
-    .single();
+    .select("id, booking_ref, check_in_at, check_out_at");
+
+  const reservation = Array.isArray(reservationRows) ? reservationRows[0] : null;
 
   if (reservationError || !reservation) {
     throw new Error("Impossible de finaliser la reservation");

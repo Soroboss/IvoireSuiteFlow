@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,11 +15,11 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     const formData = new FormData(event.currentTarget);
-    const supabase = createClient();
+    const insforge = createClient();
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await insforge.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
       setError(signInError.message || "Email ou mot de passe incorrect.");

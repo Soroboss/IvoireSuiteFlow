@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { RoomCalendar } from "@/components/rooms/RoomCalendar";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 const ESTABLISHMENT_ID = "22222222-2222-2222-2222-222222222221";
 
@@ -22,12 +22,12 @@ export default function RoomsCalendarPage() {
   const [reservations, setReservations] = useState<CalendarReservation[]>([]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_INSFORGE_BASE_URL) {
       return;
     }
     const run = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
+      const insforge = createClient();
+      const { data } = await insforge.database
         .from("reservations")
         .select(
           `

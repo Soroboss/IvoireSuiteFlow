@@ -2,30 +2,30 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicBookingForm } from "@/components/public/PublicBookingForm";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createServerInsforgeClient } from "@/lib/insforge/server";
 import { formatFCFA } from "@/lib/utils";
 
 type Params = { slug: string };
 export const dynamic = "force-dynamic";
 
 async function getEstablishment(slug: string) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const insforge = createServerInsforgeClient();
+  const { data, error } = await insforge.database
     .from("establishments")
     .select(
       "id, name, slug, city, neighborhood, description, star_rating, logo_url, cover_image_url, phone, whatsapp, email, latitude, longitude"
     )
     .eq("slug", slug)
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
   return data as any;
 }
 
 async function getRoomTypes(establishmentId: string) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data } = await supabaseAdmin
+  const insforge = createServerInsforgeClient();
+  const { data } = await insforge.database
     .from("room_types")
     .select("id, name, description, amenities, images, base_price_night, base_price_week, base_price_day_pass")
     .eq("establishment_id", establishmentId)

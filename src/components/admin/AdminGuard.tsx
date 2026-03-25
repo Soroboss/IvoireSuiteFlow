@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -10,15 +10,15 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const run = async () => {
-      const supabase = createClient();
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
+      const insforge = createClient();
+      const { data } = await insforge.auth.getCurrentUser();
+      const user = data?.user ?? null;
       if (!user) {
         router.replace("/login");
         return;
       }
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      const { data: profileRows } = await insforge.database.from("profiles").select("role").eq("id", user.id);
+      const profile = Array.isArray(profileRows) ? profileRows[0] : null;
       if (profile?.role !== "super_admin") {
         setState("denied");
         router.replace("/dashboard");

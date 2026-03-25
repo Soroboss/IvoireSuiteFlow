@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 
 const steps = ["Votre compte", "Votre entreprise", "Votre établissement"] as const;
 
@@ -51,7 +51,7 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    const supabase = createClient();
+    const insforge = createClient();
 
     const res = await fetch("/api/register", {
       method: "POST",
@@ -79,7 +79,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await insforge.auth.signInWithPassword({
       email: form.email.trim().toLowerCase(),
       password: form.password
     });

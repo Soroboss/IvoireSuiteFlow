@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { BookingModeBadge } from "@/components/shared/BookingModeBadge";
 import { FCFADisplay } from "@/components/shared/FCFADisplay";
 import { HourlyTimer } from "@/components/reservations/HourlyTimer";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/insforge/client";
 import { downloadInvoicePdf } from "@/lib/pdf/invoice-template";
 import { formatDate } from "@/lib/utils";
 import { useReservations } from "@/hooks/useReservations";
@@ -19,10 +19,10 @@ export default function ReservationDetailPage() {
   const { addJournalLog } = useReservations();
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
-    const supabase = createClient();
+    if (!process.env.NEXT_PUBLIC_INSFORGE_BASE_URL) return;
+    const insforge = createClient();
     const run = async () => {
-      const { data } = await supabase
+      const { data } = await insforge.database
         .from("reservations")
         .select(
           `
@@ -32,16 +32,16 @@ export default function ReservationDetailPage() {
         `
         )
         .eq("id", params.id)
-        .single();
+        .maybeSingle();
       setReservation(data);
 
-      const { data: p } = await supabase.from("payments").select("*").eq("reservation_id", params.id).order("created_at", { ascending: false });
-      const { data: x } = await supabase
+      const { data: p } = await insforge.database.from("payments").select("*").eq("reservation_id", params.id).order("created_at", { ascending: false });
+      const { data: x } = await insforge.database
         .from("reservation_extras")
         .select("*, extras:extra_id(name)")
         .eq("reservation_id", params.id)
         .order("date_added", { ascending: false });
-      const { data: j } = await supabase
+      const { data: j } = await insforge.database
         .from("reservation_action_logs")
         .select("*")
         .eq("reservation_id", params.id)
@@ -75,16 +75,16 @@ export default function ReservationDetailPage() {
           reservationId={reservation.id}
           roomNumber={room?.room_number ?? "-"}
           onExtend={async (_id, hours) => {
-            const supabase = createClient();
+            const insforge = createClient();
             const newDate = new Date(new Date(reservation.check_out_at).getTime() + hours * 3600000).toISOString();
-            await supabase.from("reservations").update({ check_out_at: newDate, timer_expires_at: newDate }).eq("id", reservation.id);
+            await insforge.database.from("reservations").update({ check_out_at: newDate, timer_expires_at: newDate }).eq("id", reservation.id);
             await addJournalLog(reservation.id, "extend_hourly", `Prolongation +${hours}h`, { previous_checkout: reservation.check_out_at, new_checkout: newDate });
             setReservation((prev: any) => ({ ...prev, check_out_at: newDate, timer_expires_at: newDate }));
           }}
           onCheckout={async () => {
-            const supabase = createClient();
-            await supabase.from("reservations").update({ status: "checked_out", actual_check_out: new Date().toISOString() }).eq("id", reservation.id);
-            await supabase.from("rooms").update({ status: "available", current_reservation_id: null }).eq("id", reservation.room_id);
+            const insforge = createClient();
+            await insforge.database.from("reservations").update({ status: "checked_out", actual_check_out: new Date().toISOString() }).eq("id", reservation.id);
+            await insforge.database.from("rooms").update({ status: "available", current_reservation_id: null }).eq("id", reservation.room_id);
             await addJournalLog(reservation.id, "checkout", "Check-out effectue", { room_id: reservation.room_id });
             setReservation((prev: any) => ({ ...prev, status: "checked_out" }));
           }}

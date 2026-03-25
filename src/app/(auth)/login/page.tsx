@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/insforge/client";
+import { setAccessToken } from "@/lib/auth/session";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,11 +20,14 @@ export default function LoginPage() {
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
 
-    const { error: signInError } = await insforge.auth.signInWithPassword({ email, password });
+    const { data: sessionData, error: signInError } = await insforge.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
       setError(signInError.message || "Email ou mot de passe incorrect.");
       return;
+    }
+    if (sessionData?.accessToken) {
+      setAccessToken(sessionData.accessToken);
     }
     router.push("/dashboard");
   };

@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 import {
+  Activity,
   BarChart3,
   BedDouble,
   Building2,
@@ -23,7 +25,8 @@ const nav = [
   { href: "/housekeeping", label: "Ménage", icon: Sparkles },
   { href: "/staff", label: "Personnel", icon: UserCog },
   { href: "/reports", label: "Rapports", icon: BarChart3 },
-  { href: "/settings", label: "Paramètres", icon: Settings }
+  { href: "/settings", label: "Paramètres", icon: Settings },
+  { href: "/settings/backend-test", label: "Test backend", icon: Activity }
 ];
 
 const adminNav = [
@@ -59,6 +62,7 @@ export function Sidebar() {
       <div className="mt-auto rounded-xl border border-isf-border bg-isf-bgElevated p-3 text-sm">
         <p className="font-medium text-isf-cream">Admin IvoireSuiteFlow</p>
         <p className="text-xs text-isf-textMuted">Rôle: admin</p>
+        <SignOutButton />
       </div>
     </aside>
   );

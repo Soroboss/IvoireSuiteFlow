@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import { createClient } from "@/lib/insforge/client";
+import { setAccessToken } from "@/lib/auth/session";
 
 const steps = ["Votre compte", "Votre entreprise", "Votre établissement"] as const;
 
@@ -79,7 +80,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const { error: signInError } = await insforge.auth.signInWithPassword({
+    const { data: sessionData, error: signInError } = await insforge.auth.signInWithPassword({
       email: form.email.trim().toLowerCase(),
       password: form.password
     });
@@ -88,6 +89,9 @@ export default function RegisterPage() {
     if (signInError) {
       setError("Compte créé. Connectez-vous manuellement depuis la page de connexion.");
       return;
+    }
+    if (sessionData?.accessToken) {
+      setAccessToken(sessionData.accessToken);
     }
 
     router.push("/dashboard");

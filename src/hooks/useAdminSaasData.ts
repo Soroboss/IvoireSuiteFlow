@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { addMonths, format, startOfMonth, subMonths } from "date-fns";
+import { getAccessToken } from "@/lib/auth/session";
 
 export type SubscriberRow = {
   id: string;
@@ -23,17 +24,26 @@ export function useAdminSaasData() {
   useEffect(() => {
     const run = async () => {
       setError(null);
-      const res = await fetch("/api/admin/saas", { credentials: "include" });
-      const json = (await res.json()) as { rows?: SubscriberRow[]; error?: string };
+      const token = getAccessToken();
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const res = await fetch("/api/admin/saas", { credentials: "include", headers });
+      const json = (await res.json()) as { rows?: SubscriberRow[]; error?: { message?: string } };
 
       if (!res.ok) {
         setRows([]);
-        setError(json.error ?? "Impossible de charger les données SaaS");
+        const msg =
+          typeof json.error === "object" && json.error?.message
+            ? json.error.message
+            : (json as { error?: string }).error ?? "Impossible de charger les données SaaS";
+        setError(msg);
         setLoading(false);
         return;
       }
 
-      setRows(json.rows ?? []);
+      setRows((json as { rows?: SubscriberRow[] }).rows ?? []);
       setLoading(false);
     };
     run();

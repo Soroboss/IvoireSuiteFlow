@@ -146,7 +146,19 @@ export default function RegisterPage() {
       {error ? <p className="text-sm text-isf-error">{error}</p> : null}
 
       <div className="flex gap-2">
-        <button type="button" onClick={() => setStep((v) => Math.max(0, v - 1))} className="h-11 flex-1 rounded-md border border-isf-border" disabled={step === 0}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            setError(null);
+            if (step === 0) {
+              router.push("/login");
+            } else {
+              setStep((v) => Math.max(0, v - 1));
+            }
+          }}
+          className="h-11 flex-1 rounded-md border border-isf-border"
+        >
           Retour
         </button>
         <button type="submit" disabled={loading} className="h-11 flex-1 rounded-md bg-isf-gold font-medium text-black">
